@@ -1,0 +1,35 @@
+; ------------------------------------------------------------------------------
+; Theme created by Topsitemakers
+; http://www.topsitemakers.com
+; ------------------------------------------------------------------------------
+
+; ------------------------------------------------------------------------------
+; Administrative theme with some custom modifications. Based on the contributed
+; Rubik theme. 
+; ------------------------------------------------------------------------------
+name = Rubik Custom
+description = Administrative theme with some custom modifications. Based on the contributed Rubik theme.
+version = 1.0
+core = 7.x
+engine = phptemplate
+screenshot = images/screenshot.png
+base theme = rubik
+
+; ------------------------------------------------------------------------------
+; Stylesheets.
+; ------------------------------------------------------------------------------
+; Stylesheet with UI overrides.
+stylesheets[all][] = modifications.css
+
+; ------------------------------------------------------------------------------
+; Scripts.
+; ------------------------------------------------------------------------------
+; scripts[] = 
+
+; ------------------------------------------------------------------------------
+; Regions.
+; ------------------------------------------------------------------------------
+regions[content] = Content
+regions[help] = Help
+regions[page_top] = Page top
+regions[page_bottom] = Page bottom

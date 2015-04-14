@@ -1,0 +1,50 @@
+; ------------------------------------------------------------------------------
+; Installation profile created by Topsitemakers.com
+; http://www.topsitemakers.com
+; ------------------------------------------------------------------------------
+
+; ------------------------------------------------------------------------------
+; Custom installation profile
+; ------------------------------------------------------------------------------
+name = Custom
+description = Custom installation profile with pre-setup environment.
+version = 7.x-1.0
+core = 7.x
+exclusive = TRUE
+
+; ------------------------------------------------------------------------------
+; Core modules
+; ------------------------------------------------------------------------------
+dependencies[] = block
+dependencies[] = contextual
+dependencies[] = image
+dependencies[] = list
+dependencies[] = menu
+dependencies[] = number
+dependencies[] = options
+dependencies[] = dblog
+dependencies[] = shortcut
+dependencies[] = field_ui
+dependencies[] = file
+
+; ------------------------------------------------------------------------------
+; Contributed modules
+; ------------------------------------------------------------------------------
+dependencies[] = admin_menu
+dependencies[] = adminimal_admin_menu
+dependencies[] = backup_migrate
+dependencies[] = devel
+dependencies[] = ckeditor
+dependencies[] = ctools
+dependencies[] = views
+dependencies[] = views_ui
+dependencies[] = module_filter
+dependencies[] = filefield_sources
+dependencies[] = filefield_sources_plupload
+dependencies[] = globalredirect
+dependencies[] = pathauto
+dependencies[] = transliteration
+dependencies[] = libraries
+dependencies[] = plupload
+dependencies[] = rules
+dependencies[] = rules_admin

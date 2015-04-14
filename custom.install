@@ -1,0 +1,343 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the custom install profile.
+ *
+ * Created by: Topsitemakers
+ * http://www.topsitemakers.com/
+ */
+
+/**
+ * Implements hook_requirements().
+ *
+ * Set minimum 'max_execution_time' requirement.
+ *
+ * Taken from "Drupal Commons" installation profile.
+ */
+function custom_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break during installation.
+  $t = get_t();
+  if ($phase == 'install') {
+    // Test PHP minimum execution time
+    $requirements['php_max_execution_time'] = array(
+      'title' => $t('PHP Max Execution Time'),
+      'value' => ini_get('max_execution_time'),
+    );
+    $max_execution_time = (int)ini_get('max_execution_time');
+    // Don't set the error when max_execution_time is 0 (Infinite).
+    if ($max_execution_time && $max_execution_time < DRUPAL_MINIMUM_MAX_EXECUTION_TIME) {
+      $requirements['php_max_execution_time']['description'] = $t('Your PHP execution time is too low, please set it greater than or equal to %time seconds.', array('%time' => DRUPAL_MINIMUM_MAX_EXECUTION_TIME));
+      $requirements['php_max_execution_time']['severity'] = REQUIREMENT_ERROR;
+    }
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_install().
+ */
+function custom_install() {
+
+  /**
+   * Add custom text formats.
+   */
+  // Filtered HTML text format.
+  $filtered_html_format = array(
+    'format' => 'filtered_html',
+    'name' => 'Filtered HTML',
+    'weight' => 0,
+    'filters' => array(
+      // URL filter.
+      'filter_url' => array(
+        'weight' => 0,
+        'status' => 1,
+      ),
+      // HTML filter.
+      'filter_html' => array(
+        'weight' => 1,
+        'status' => 1,
+      ),
+      // Line break filter.
+      'filter_autop' => array(
+        'weight' => 2,
+        'status' => 1,
+      ),
+      // HTML corrector filter.
+      'filter_htmlcorrector' => array(
+        'weight' => 10,
+        'status' => 1,
+      ),
+    ),
+  );
+  $filtered_html_format = (object) $filtered_html_format;
+  filter_format_save($filtered_html_format);
+  // Update allowed tags for Filtered HTML to include paragraphs and breaklines.
+  $filter_html_settings = db_select('filter', 'f')
+    ->fields('f', array('settings'))
+    ->condition('format', 'filtered_html')
+    ->condition('name', 'filter_html')
+    ->execute()
+    ->fetchField();
+  $filter_html_settings = unserialize($filter_html_settings);
+  $filter_html_settings['allowed_html'] .= ' <br> <p>';
+  db_update('filter')
+    ->fields(array('settings' => serialize($filter_html_settings)))
+    ->condition('format', 'filtered_html')
+    ->condition('name', 'filter_html')
+    ->execute();
+  // Full HTML text format.
+  $full_html_format = array(
+    'format' => 'full_html',
+    'name' => 'Full HTML',
+    'weight' => 1,
+    'filters' => array(
+      // URL filter.
+      'filter_url' => array(
+        'weight' => 0,
+        'status' => 1,
+      ),
+      // Line break filter.
+      'filter_autop' => array(
+        'weight' => 1,
+        'status' => 1,
+      ),
+      // HTML corrector filter.
+      'filter_htmlcorrector' => array(
+        'weight' => 10,
+        'status' => 1,
+      ),
+    ),
+  );
+  $full_html_format = (object) $full_html_format;
+  filter_format_save($full_html_format);
+
+  /**
+   * Enable standard blocks.
+   */
+  $admin_theme = 'rubik_custom';
+  $default_theme = variable_get('theme_default', 'bartik');
+  $blocks = array(
+    array(
+      'module' => 'system',
+      'delta'  => 'main',
+      'theme'  => $default_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'content',
+      'pages'  => '',
+      'cache'  => -1,
+    ),
+    array(
+      'module' => 'user',
+      'delta'  => 'login',
+      'theme'  => $default_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'sidebar_first',
+      'pages'  => '',
+      'cache'  => -1,
+    ),
+    array(
+      'module' => 'system',
+      'delta'  => 'help',
+      'theme'  => $default_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'help',
+      'pages'  => '',
+      'cache'  => -1,
+    ),
+    array(
+      'module' => 'system',
+      'delta'  => 'main',
+      'theme'  => $admin_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'content',
+      'pages'  => '',
+      'cache'  => -1,
+    ),
+    array(
+      'module' => 'system',
+      'delta'  => 'help',
+      'theme'  => $admin_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'help',
+      'pages'  => '',
+      'cache'  => -1,
+    ),
+    array(
+      'module' => 'user',
+      'delta'  => 'login',
+      'theme'  => $admin_theme,
+      'status' => 1,
+      'weight' => 10,
+      'region' => 'content',
+      'pages'  => '',
+      'cache'  => -1,
+    ),
+  );
+  $query = db_insert('block')->fields(array('module', 'delta', 'theme', 'status', 'weight', 'region', 'pages', 'cache'));
+  foreach ($blocks as $block) {
+    $query->values($block);
+  }
+  $query->execute();
+
+  // Show field descriptions inline as very often the description is much bigger
+  // than the popup displayed on hover. As this is saved in theme settings, we
+  // need to populate everything with default values and alter what we need.
+  $admin_theme_settings = array(
+    // Default values.
+    'toggle_logo' => 1,
+    'toggle_name' => 1,
+    'toggle_slogan' => 1,
+    'toggle_node_user_picture' => TRUE,
+    'toggle_comment_user_picture' => TRUE,
+    'toggle_comment_user_verification' => TRUE,
+    'toggle_favicon' => 1,
+    'toggle_main_menu' => 1,
+    'toggle_secondary_menu' => 1,
+    'default_logo' => 1,
+    'logo_path' => '',
+    'logo_upload' => '',
+    'default_favicon' => 1,
+    'favicon_path' => '',
+    'favicon_upload' => '',
+    // Rubik settings. First one is updated.
+    'rubik_inline_field_descriptions' => 1,
+    'rubik_disable_sidebar_in_form' => 0,
+    'rubik_sidebar_field_ui' => 0,
+  );
+  variable_set('theme_' . $admin_theme . '_settings', $admin_theme_settings);
+
+  // Insert default pre-defined node types into the database. For a complete
+  // list of available node type attributes, refer to the node type API
+  // documentation at: http://api.drupal.org/api/HEAD/function/hook_node_info.
+  $types = array(
+    array(
+      'type'        => 'page',
+      'name'        => st('Page'),
+      'base'        => 'node_content',
+      'description' => '',
+      'custom'      => 1,
+      'modified'    => 1,
+      'locked'      => 0,
+    ),
+  );
+
+  foreach ($types as $type) {
+    $type = node_type_set_defaults($type);
+    node_type_save($type);
+    node_add_body_field($type);
+  }
+
+  /**
+   * Set variables.
+   */
+  // Default "Basic page" to not promoted, automatic revisioning and with
+  // disabled comments.
+  variable_set('node_options_page', array('status', 'revision'));
+  variable_set('comment_page', COMMENT_NODE_HIDDEN);
+  // Don't display date and author information for "Basic page" nodes by
+  // default.
+  variable_set('node_submitted_page', FALSE);
+  // Allow visitor account creation with administrative approval.
+  variable_set('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL);
+  // Increase the default number of database log messages to keep.
+  variable_set('dblog_row_limit', 1000000);
+  // Extend the shortcut limit from 7 to 12 links
+  variable_set('shortcut_max_slots', 12);
+  // Switch off the cron.
+  variable_set('cron_safe_threshold', 0);
+  // Views: disable "Show advanced help warning".
+  variable_set('views_ui_show_advanced_help_warning', FALSE);
+  // Views: disable "Automatically update preview on changes".
+  variable_set('views_ui_always_live_preview', FALSE);
+  // Views: disable "Show information and statistics (...)".
+  variable_set('views_ui_show_preview_information', FALSE);
+  // Pathauto: transliterate all URLs prior to creating alias. This is
+  // necessary to avoid accented or non-latin alphabets in URLs.
+  variable_set('pathauto_transliterate', TRUE);
+  // Pathauto: set custom URL rules for different content types.
+  // These are the default rules applied for all content types without
+  // specific patterns.
+  variable_set('pathauto_node_pattern', '[node:content-type]/[node:title]');
+  // Pages should usually be accessible just with the title alias.
+  variable_set('pathauto_node_page_pattern', '[node:title]');
+  // Change the default JPEG image quality to 90%.
+  variable_set('image_jpeg_quality', 90);
+  // Change update notification threshold to only security updates.
+  variable_set('update_notification_threshold', 'security');
+  // Set Monday as first day of the week.
+  variable_set('date_first_day', 1);
+
+  // Create a default role for site administrators, with all available
+  // permissions assigned.
+  $admin_role = new stdClass();
+  $admin_role->name = 'administrator';
+  $admin_role->weight = 2;
+  user_role_save($admin_role);
+  user_role_grant_permissions($admin_role->rid, array_keys(module_invoke_all('permission')));
+  // Set this as the administrator role.
+  variable_set('user_admin_role', $admin_role->rid);
+
+  // Assign user 1 the "administrator" role.
+  db_insert('users_roles')
+    ->fields(array('uid' => 1, 'rid' => $admin_role->rid))
+    ->execute();
+
+  // Allow anonymous and registered users to access content.
+  user_role_grant_permissions(1, array('access content'));
+  user_role_grant_permissions(2, array('access content'));
+
+  // Enable the admin theme.
+  db_update('system')
+    ->fields(array('status' => 1))
+    ->condition('type', 'theme')
+    ->condition('name', $admin_theme)
+    ->execute();
+  variable_set('admin_theme', $admin_theme);
+  variable_set('node_admin_theme', '1');
+
+  $private_directory = 'sites/default/files/private';
+  // First, create the folder.
+  drupal_mkdir($private_directory, NULL, TRUE);
+  drupal_chmod($private_directory);
+  // Setup private filesystem.
+  variable_set('file_private_path', $private_directory);
+  file_create_htaccess($private_directory);
+  // Create backup_migrate destinations.
+  $common_settings = serialize(array('chmod' => '', 'chgrp' => ''));
+  // Directory for DB backups.
+  db_insert('backup_migrate_destinations')
+    ->fields(array(
+      'machine_name' => 'scheduled_db',
+      'name' => 'Directory for DB backups',
+      'subtype' => 'file',
+      'location' => 'private://backup_migrate/scheduled_database',
+      'settings' => $common_settings,
+    ))
+    ->execute();
+
+  // Routine DB schedule.
+  db_insert('backup_migrate_schedules')
+    ->fields(array(
+      'machine_name' => 'routine_db_schedule',
+      'name' => 'Routine DB schedule',
+      'source_id' => 'db',
+      'destination_id' => 'scheduled_db',
+      'copy_destination_id' => '',
+      'profile_id' => 'default',
+      'keep' => -2,
+      'period' => 24 * 60  * 60,
+      'enabled' => TRUE,
+      'cron' => 'builtin',
+      'cron_schedule' => '0 4 * * *',
+    ))
+    ->execute();
+
+}
